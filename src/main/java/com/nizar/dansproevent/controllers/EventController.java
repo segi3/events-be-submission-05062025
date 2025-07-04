@@ -7,17 +7,14 @@ import com.nizar.dansproevent.payload.request.EventCreateRequest;
 import com.nizar.dansproevent.payload.response.EventRegistrationResponse;
 import com.nizar.dansproevent.payload.response.EventResponse;
 import com.nizar.dansproevent.payload.response.MessageResponse;
-import com.nizar.dansproevent.repositories.EventRepository;
-import com.nizar.dansproevent.repositories.UserRepository;
-import com.nizar.dansproevent.services.EventRegistrationService;
+import com.nizar.dansproevent.services.EventService;
 import com.nizar.dansproevent.services.UserDetailsImpl;
-import jakarta.validation.Valid;
+import com.nizar.dansproevent.services.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -31,13 +28,10 @@ import java.util.Optional;
 public class EventController {
 
     @Autowired
-    EventRepository eventRepository;
+    private UserService userService;
 
     @Autowired
-    UserRepository userRepository;
-
-    @Autowired
-    private EventRegistrationService eventRegistrationService;
+    private EventService eventService;
 
     @PostMapping("events/{eventId}/register")
     @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
@@ -46,14 +40,14 @@ public class EventController {
         LocalDateTime registrationDate = LocalDateTime.now();
 
         UserDetailsImpl userDetails = (UserDetailsImpl) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        Optional<User> user = userRepository.findById(userDetails.getId());
+        Optional<User> user = userService.findById(userDetails.getId());
 
         try {
-            EventRegistrationResponse response = eventRegistrationService.registerUserForEvent(
+            EventRegistrationResponse response = eventService.registerUserForEvent(
                     eventId, user.get().getId(), registrationDate
             );
 
-            return ResponseEntity.ok(new MessageResponse("User registered successfully.", response));
+            return ResponseEntity.ok(new MessageResponse("User registered to event successfully.", response));
         } catch (BusinessLogicException e) {
             return ResponseEntity.badRequest()
                     .body(new MessageResponse(e.getMessage()));
@@ -64,14 +58,14 @@ public class EventController {
     }
 
     @GetMapping("/events")
-    public ResponseEntity<List<EventResponse>> getAllEvents(@RequestParam(required = false) String title) {
+    public ResponseEntity<?> getAllEvents(@RequestParam(required = false) String title) {
         try {
             List<Event> events = new ArrayList<Event>();
 
             if (title == null) {
-                eventRepository.findAll().forEach(events::add);
+                eventService.findAll().forEach(events::add);
             } else {
-                eventRepository.findByTitleContaining(title).forEach(events::add);
+                eventService.findByTitleContaining(title).forEach(events::add);
             }
 
             if (events.isEmpty()) {
@@ -96,7 +90,7 @@ public class EventController {
 
     @GetMapping("/events/{id}")
     public ResponseEntity<EventResponse> getByEventId(@PathVariable("id") long id) {
-        Optional<Event> eventOptional = eventRepository.findById(id);
+        Optional<Event> eventOptional = eventService.findById(id);
 
         if (eventOptional.isPresent()) {
             Event event = eventOptional.get();
@@ -114,12 +108,12 @@ public class EventController {
 
     @PostMapping("/events")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<EventResponse> createEvent(@RequestBody EventCreateRequest event) {
+    public ResponseEntity<?> createEvent(@RequestBody EventCreateRequest event) {
         UserDetailsImpl userDetails = (UserDetailsImpl) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        Optional<User> admin = userRepository.findById(userDetails.getId());
+        Optional<User> admin = userService.findById(userDetails.getId());
 
         try {
-            Event _event = eventRepository.save(new Event(
+            Event _event = eventService.save(new Event(
                     event.getTitle(),
                     event.getDescription(),
                     event.getDate(),
@@ -131,12 +125,13 @@ public class EventController {
                     .title(_event.getTitle())
                     .description(_event.getDescription())
                     .date(_event.getDate())
-                    .user(_event.getCreatedBy())
                     .build()
                     , HttpStatus.OK);
 
         } catch (Exception e) {
-            return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+
+            return ResponseEntity.internalServerError()
+                    .body(new MessageResponse("Failed to create event", e.getMessage()));
         }
     }
 }

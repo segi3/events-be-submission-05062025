@@ -8,15 +8,15 @@ import com.nizar.dansproevent.payload.response.EventRegistrationResponse;
 import com.nizar.dansproevent.repositories.EventRegistrationRepository;
 import com.nizar.dansproevent.repositories.EventRepository;
 import com.nizar.dansproevent.repositories.UserRepository;
-import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
 
 @Service
-@Transactional
-public class EventRegistrationService {
+public class EventService {
 
     @Autowired
     private EventRegistrationRepository eventRegistrationRepository;
@@ -26,6 +26,26 @@ public class EventRegistrationService {
 
     @Autowired
     private UserRepository userRepository;
+
+    public Optional<Event> findByTitle(String title){
+        return eventRepository.findByTitle(title);
+    }
+
+    public List<Event> findByTitleContaining(String title){
+        return eventRepository.findByTitleContaining(title);
+    }
+
+    public List<Event> findAll() {
+        return eventRepository.findAll();
+    }
+
+    public Optional<Event> findById(Long id) {
+        return eventRepository.findById(id);
+    }
+
+    public Event save(Event event) {
+        return eventRepository.save(event);
+    }
 
     public EventRegistrationResponse registerUserForEvent(Long eventId, Long userId, LocalDateTime registrationDate) {
         Event event = eventRepository.findById(eventId)

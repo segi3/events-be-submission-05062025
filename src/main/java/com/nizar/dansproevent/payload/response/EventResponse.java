@@ -13,5 +13,4 @@ public class EventResponse {
     private String title;
     private String description;
     private LocalDateTime date;
-    private User user;
 }

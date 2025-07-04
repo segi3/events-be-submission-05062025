@@ -12,10 +12,10 @@ import com.nizar.dansproevent.payload.request.LoginRequest;
 import com.nizar.dansproevent.payload.request.SignupRequest;
 import com.nizar.dansproevent.payload.response.MessageResponse;
 import com.nizar.dansproevent.payload.response.UserInfoResponse;
-import com.nizar.dansproevent.repositories.RoleRepository;
-import com.nizar.dansproevent.repositories.UserRepository;
 import com.nizar.dansproevent.security.jwt.JwtUtils;
+import com.nizar.dansproevent.services.RoleService;
 import com.nizar.dansproevent.services.UserDetailsImpl;
+import com.nizar.dansproevent.services.UserService;
 import jakarta.validation.Valid;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,10 +39,10 @@ public class AuthController {
     AuthenticationManager authenticationManager;
 
     @Autowired
-    UserRepository userRepository;
+    UserService userService;
 
     @Autowired
-    RoleRepository roleRepository;
+    RoleService roleService;
 
     @Autowired
     PasswordEncoder passwordEncoder;
@@ -64,44 +64,44 @@ public class AuthController {
             .map(item -> item.getAuthority())
             .collect(Collectors.toList());
 
-        return ResponseEntity.ok(new UserInfoResponse(jwt,
-            userDetails.getId(),
-            userDetails.getUsername(),
-            userDetails.getEmail(),
-            roles));
+        return ResponseEntity.ok(new MessageResponse("User sign in success.", UserInfoResponse.builder()
+                .token(jwt)
+                .email(userDetails.getEmail())
+                .build()));
     }
 
     @PostMapping("/signup")
     public ResponseEntity<?> registerUser(@Valid @RequestBody SignupRequest signUpRequest) {
-        if (userRepository.existsByEmail(signUpRequest.getEmail())) {
+        if (userService.existsByEmail(signUpRequest.getEmail())) {
             return ResponseEntity
                     .badRequest()
                     .body(new MessageResponse("Error: Email is already in use!"));
         }
 
-        // Create new user's account
+        // create account
         User user = new User(signUpRequest.getName(),
                 signUpRequest.getEmail(),
                 passwordEncoder.encode(signUpRequest.getPassword()));
 
+        // parse roles
         Set<String> strRoles = signUpRequest.getRole();
         Set<Role> roles = new HashSet<>();
 
         if (strRoles == null) {
-            Role userRole = roleRepository.findByName(RoleEnum.ROLE_USER)
+            Role userRole = roleService.findByName(RoleEnum.ROLE_USER)
                     .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
             roles.add(userRole);
         } else {
             strRoles.forEach(role -> {
                 switch (role) {
                     case "admin":
-                        Role adminRole = roleRepository.findByName(RoleEnum.ROLE_ADMIN)
+                        Role adminRole = roleService.findByName(RoleEnum.ROLE_ADMIN)
                                 .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
                         roles.add(adminRole);
 
                         break;
                     default:
-                        Role userRole = roleRepository.findByName(RoleEnum.ROLE_USER)
+                        Role userRole = roleService.findByName(RoleEnum.ROLE_USER)
                                 .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
                         roles.add(userRole);
                 }
@@ -109,8 +109,12 @@ public class AuthController {
         }
 
         user.setRoles(roles);
-        userRepository.save(user);
+        userService.save(user);
 
-        return ResponseEntity.ok(new MessageResponse("User registered successfully!"));
+        return ResponseEntity.ok(new MessageResponse("User sign up success.", UserInfoResponse.builder()
+                .id(user.getId())
+                .name(user.getName())
+                .email(user.getEmail())
+                .build()));
     }
 }
