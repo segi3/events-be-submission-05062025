@@ -8,6 +8,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 
 @Data
 @NoArgsConstructor
@@ -33,9 +35,14 @@ public class Event {
     @Column(name = "event_date")
     private LocalDateTime date;
 
+    // fk with user (admin)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by")
     private User createdBy;
+
+    // fk with user (user registration)
+    @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private Set<EventRegistration> eventRegistrations = new HashSet<>();
 
     public Event(String title, String description, LocalDateTime date, User createdBy) {
         this.title = title;

@@ -37,11 +37,17 @@ public class User {
     @Size(max = 120)
     private String password;
 
+    // fk with roles
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(  name = "user_roles",
             joinColumns = @JoinColumn(name = "user_id"),
             inverseJoinColumns = @JoinColumn(name = "role_id"))
     private Set<Role> roles = new HashSet<>();
+
+    // fk with event
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private Set<EventRegistration> eventRegistrations = new HashSet<>();
+
 
     public User(String name, String email, String password) {
         this.name = name;
