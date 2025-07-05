@@ -1,6 +1,5 @@
 package com.nizar.dansproevent.payload.response;
 
-import com.nizar.dansproevent.models.User;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -13,4 +12,5 @@ public class EventResponse {
     private String title;
     private String description;
     private LocalDateTime date;
+    private long registrationCount;
 }

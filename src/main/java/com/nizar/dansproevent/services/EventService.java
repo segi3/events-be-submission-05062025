@@ -5,15 +5,18 @@ import com.nizar.dansproevent.models.Event;
 import com.nizar.dansproevent.models.EventRegistration;
 import com.nizar.dansproevent.models.User;
 import com.nizar.dansproevent.payload.response.EventRegistrationResponse;
+import com.nizar.dansproevent.payload.response.EventResponse;
+import com.nizar.dansproevent.payload.response.StatisticsResponse;
 import com.nizar.dansproevent.repositories.EventRegistrationRepository;
 import com.nizar.dansproevent.repositories.EventRepository;
 import com.nizar.dansproevent.repositories.UserRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class EventService {
@@ -67,7 +70,42 @@ public class EventService {
         return mapToResponse(savedRegistration);
     }
 
+    @Transactional
+    public StatisticsResponse getOverallStatistics() {
+        // fetch all data from repositories
+        List<Event> allEvents = eventRepository.findAll();
+        List<EventRegistration> allRegistrations = eventRegistrationRepository.findAll();
 
+        long totalEvents = allEvents.size();
+        long totalRegistrations = allRegistrations.size();
+
+        // avg rounded
+        double averageRegistrationsPerEvent = totalEvents > 0 ? Math.round((double) totalRegistrations / totalEvents * 100.0) / 100.0 : 0.0;
+
+        List<EventResponse> sorted = allRegistrations.stream()
+                .collect(Collectors.groupingBy( // group registrations by evetn
+                        EventRegistration::getEvent,
+                        Collectors.counting() // count registrer in each event
+                ))
+                .entrySet().stream()
+                .sorted(Map.Entry.<Event, Long>comparingByValue().reversed())
+                .limit(3)
+                .map(entry -> EventResponse.builder()
+                        .id(entry.getKey().getId())
+                        .title(entry.getKey().getTitle())
+                        .description(entry.getKey().getDescription())
+                        .date(entry.getKey().getDate())
+                        .registrationCount(entry.getValue())
+                        .build()
+                ).toList();
+
+        return new StatisticsResponse(
+                totalEvents,
+                totalRegistrations,
+                averageRegistrationsPerEvent,
+                sorted
+        );
+    }
 
     private EventRegistrationResponse mapToResponse(EventRegistration registration) {
         return new EventRegistrationResponse(

@@ -7,9 +7,11 @@ import com.nizar.dansproevent.payload.request.EventCreateRequest;
 import com.nizar.dansproevent.payload.response.EventRegistrationResponse;
 import com.nizar.dansproevent.payload.response.EventResponse;
 import com.nizar.dansproevent.payload.response.MessageResponse;
+import com.nizar.dansproevent.payload.response.StatisticsResponse;
 import com.nizar.dansproevent.services.EventService;
 import com.nizar.dansproevent.services.UserDetailsImpl;
 import com.nizar.dansproevent.services.UserService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -54,6 +56,17 @@ public class EventController {
         } catch (Exception e) {
             return ResponseEntity.internalServerError()
                     .body(new MessageResponse("Error occurred during registration"));
+        }
+    }
+
+    @GetMapping("/events/stats")
+    public ResponseEntity<?> getOverallStatistics() {
+        try {
+            StatisticsResponse stats = eventService.getOverallStatistics();
+            return ResponseEntity.ok(stats);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError()
+                    .body(new MessageResponse("Error occurred while fetching statistics", e.getMessage()));
         }
     }
 
@@ -108,7 +121,7 @@ public class EventController {
 
     @PostMapping("/events")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> createEvent(@RequestBody EventCreateRequest event) {
+    public ResponseEntity<?> createEvent(@Valid @RequestBody EventCreateRequest event) {
         UserDetailsImpl userDetails = (UserDetailsImpl) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         Optional<User> admin = userService.findById(userDetails.getId());
 
