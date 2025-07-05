@@ -11,6 +11,8 @@ import com.nizar.dansproevent.payload.response.StatisticsResponse;
 import com.nizar.dansproevent.services.EventService;
 import com.nizar.dansproevent.services.UserDetailsImpl;
 import com.nizar.dansproevent.services.UserService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -37,6 +39,8 @@ public class EventController {
 
     @PostMapping("events/{eventId}/register")
     @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
+    @Operation(summary = "Register user to event", description = "Register user to event (User and Admin")
+    @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<?> registerForEvent(@PathVariable Long eventId) {
 
         LocalDateTime registrationDate = LocalDateTime.now();
@@ -121,6 +125,8 @@ public class EventController {
 
     @PostMapping("/events")
     @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Create a new event", description = "Creates a new event (Admin only)")
+    @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<?> createEvent(@Valid @RequestBody EventCreateRequest event) {
         UserDetailsImpl userDetails = (UserDetailsImpl) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         Optional<User> admin = userService.findById(userDetails.getId());
